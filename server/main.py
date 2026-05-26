@@ -2,9 +2,22 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 from pydantic import BaseModel
+from datetime import datetime, timedelta
+import mock_data
 from mock_data import inventory_items, orders, demand_forecasts, backlog_items, spending_summary, monthly_spending, category_spending, recent_transactions, purchase_orders
 
 app = FastAPI(title="Factory Inventory Management System")
+
+# Lead time in days per product category
+CATEGORY_LEAD_TIMES = {
+    "Actuators": 14,
+    "Circuit Boards": 21,
+    "Controllers": 14,
+    "Sensors": 10,
+    "Power Supplies": 7,
+    "Mechanical": 7,
+}
+DEFAULT_LEAD_TIME = 10
 
 # Quarter mapping for date filtering
 QUARTER_MAP = {
@@ -120,6 +133,40 @@ class CreatePurchaseOrderRequest(BaseModel):
     expected_delivery_date: str
     notes: Optional[str] = None
 
+class RestockingRecommendation(BaseModel):
+    sku: str
+    name: str
+    category: str
+    warehouse: str
+    quantity_on_hand: int
+    reorder_point: int
+    unit_cost: float
+    forecasted_demand: int
+    trend: str
+    is_critical: bool
+    recommended_qty: int
+    total_cost: float
+
+class RestockingOrderItem(BaseModel):
+    sku: str
+    name: str
+    quantity: int
+    unit_cost: float
+    total_cost: float
+
+class RestockingOrder(BaseModel):
+    id: str
+    order_number: str
+    items: List[RestockingOrderItem]
+    total_cost: float
+    submitted_at: str
+    lead_time_days: int
+    expected_delivery: str
+    status: str
+
+class CreateRestockingOrderRequest(BaseModel):
+    items: List[RestockingOrderItem]
+
 # API endpoints
 @app.get("/")
 def root():
@@ -228,12 +275,20 @@ def get_recent_transactions():
     return recent_transactions
 
 @app.get("/api/reports/quarterly")
-def get_quarterly_reports():
+def get_quarterly_reports(warehouse: Optional[str] = None, category: Optional[str] = None, month: Optional[str] = None):
     """Get quarterly performance reports"""
+    filtered = orders
+    if warehouse and warehouse != 'all':
+        filtered = [o for o in filtered if o.get('warehouse') == warehouse]
+    if category and category != 'all':
+        filtered = [o for o in filtered if o.get('category', '').lower() == category.lower()]
+    if month and month != 'all':
+        filtered = [o for o in filtered if o.get('order_date', '').startswith(month)]
+
     # Calculate quarterly statistics from orders
     quarters = {}
 
-    for order in orders:
+    for order in filtered:
         order_date = order.get('order_date', '')
         # Determine quarter
         if '2025-01' in order_date or '2025-02' in order_date or '2025-03' in order_date:
@@ -274,11 +329,19 @@ def get_quarterly_reports():
     return result
 
 @app.get("/api/reports/monthly-trends")
-def get_monthly_trends():
+def get_monthly_trends(warehouse: Optional[str] = None, category: Optional[str] = None, month: Optional[str] = None):
     """Get month-over-month trends"""
+    filtered = orders
+    if warehouse and warehouse != 'all':
+        filtered = [o for o in filtered if o.get('warehouse') == warehouse]
+    if category and category != 'all':
+        filtered = [o for o in filtered if o.get('category', '').lower() == category.lower()]
+    if month and month != 'all':
+        filtered = [o for o in filtered if o.get('order_date', '').startswith(month)]
+
     months = {}
 
-    for order in orders:
+    for order in filtered:
         order_date = order.get('order_date', '')
         if not order_date:
             continue
@@ -303,6 +366,87 @@ def get_monthly_trends():
     result = list(months.values())
     result.sort(key=lambda x: x['month'])
     return result
+
+@app.get("/api/restocking/recommendations", response_model=List[RestockingRecommendation])
+def get_restocking_recommendations():
+    """Get restocking recommendations by joining demand forecasts with inventory data."""
+    # Build SKU -> inventory item map (first occurrence per SKU)
+    inventory_by_sku = {}
+    for item in inventory_items:
+        sku = item["sku"]
+        if sku not in inventory_by_sku:
+            inventory_by_sku[sku] = item
+
+    recommendations = []
+    for forecast in demand_forecasts:
+        sku = forecast["item_sku"]
+        inv = inventory_by_sku.get(sku)
+        if not inv:
+            continue
+
+        recommended_qty = forecast["forecasted_demand"]
+        recommendations.append({
+            "sku": sku,
+            "name": forecast["item_name"],
+            "category": inv["category"],
+            "warehouse": inv["warehouse"],
+            "quantity_on_hand": inv["quantity_on_hand"],
+            "reorder_point": inv["reorder_point"],
+            "unit_cost": inv["unit_cost"],
+            "forecasted_demand": forecast["forecasted_demand"],
+            "trend": forecast["trend"],
+            "is_critical": inv["quantity_on_hand"] <= inv["reorder_point"],
+            "recommended_qty": recommended_qty,
+            "total_cost": round(recommended_qty * inv["unit_cost"], 2),
+        })
+
+    # Sort: critical items first, then by forecasted_demand descending
+    recommendations.sort(key=lambda x: (not x["is_critical"], -x["forecasted_demand"]))
+    return recommendations
+
+
+@app.post("/api/restocking/orders", response_model=RestockingOrder)
+def create_restocking_order(request: CreateRestockingOrderRequest):
+    """Submit a restocking order."""
+    if not request.items:
+        raise HTTPException(status_code=400, detail="Order must contain at least one item")
+
+    now = datetime.now()
+    order_index = len(mock_data.restocking_orders) + 1
+    order_number = f"RST-{now.strftime('%Y%m%d')}-{order_index:04d}"
+
+    # Determine lead time from item categories via inventory lookup
+    inventory_by_sku = {item["sku"]: item for item in inventory_items}
+    lead_time_days = DEFAULT_LEAD_TIME
+    for order_item in request.items:
+        inv = inventory_by_sku.get(order_item.sku)
+        if inv:
+            item_lead_time = CATEGORY_LEAD_TIMES.get(inv["category"], DEFAULT_LEAD_TIME)
+            lead_time_days = max(lead_time_days, item_lead_time)
+
+    expected_delivery = now + timedelta(days=lead_time_days)
+    total_cost = round(sum(item.total_cost for item in request.items), 2)
+
+    new_order = {
+        "id": str(order_index),
+        "order_number": order_number,
+        "items": [item.model_dump() for item in request.items],
+        "total_cost": total_cost,
+        "submitted_at": now.isoformat(),
+        "lead_time_days": lead_time_days,
+        "expected_delivery": expected_delivery.isoformat(),
+        "status": "Submitted",
+    }
+
+    mock_data.restocking_orders.append(new_order)
+    return new_order
+
+
+@app.get("/api/restocking/orders", response_model=List[RestockingOrder])
+def get_restocking_orders():
+    """Get all submitted restocking orders, newest first."""
+    return list(reversed(mock_data.restocking_orders))
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,11 +1,11 @@
 <template>
   <div class="restocking-view">
     <div class="page-header">
-      <h2>Restocking</h2>
-      <p>Recommend and order inventory based on demand forecasts and available budget.</p>
+      <h2>{{ t('restocking.title') }}</h2>
+      <p>{{ t('restocking.description') }}</p>
     </div>
 
-    <div v-if="loading" class="loading">Loading recommendations...</div>
+    <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
     <div v-else-if="error" class="error">{{ error }}</div>
 
     <template v-else>
@@ -18,8 +18,8 @@
       <div class="card budget-card">
         <div class="budget-row">
           <div class="budget-label-group">
-            <span class="budget-label">Available Budget</span>
-            <span class="budget-hint">Drag to adjust</span>
+            <span class="budget-label">{{ t('restocking.availableBudget') }}</span>
+            <span class="budget-hint">{{ t('restocking.dragToAdjust') }}</span>
           </div>
           <span class="budget-value">{{ currencySymbol }}{{ budget.toLocaleString() }}</span>
         </div>
@@ -40,15 +40,15 @@
       <!-- Summary stats -->
       <div class="stats-grid">
         <div class="stat-card info">
-          <div class="stat-label">Items Selected</div>
+          <div class="stat-label">{{ t('restocking.itemsSelected') }}</div>
           <div class="stat-value">{{ selectedItems.length }}</div>
         </div>
         <div class="stat-card success">
-          <div class="stat-label">Total Cost</div>
+          <div class="stat-label">{{ t('restocking.totalCost') }}</div>
           <div class="stat-value">{{ currencySymbol }}{{ totalCost.toLocaleString() }}</div>
         </div>
         <div :class="['stat-card', remainingBudgetClass]">
-          <div class="stat-label">Remaining Budget</div>
+          <div class="stat-label">{{ t('restocking.remainingBudget') }}</div>
           <div class="stat-value">{{ currencySymbol }}{{ remainingBudget.toLocaleString() }}</div>
         </div>
       </div>
@@ -56,28 +56,28 @@
       <!-- Recommendations table -->
       <div class="card">
         <div class="card-header">
-          <span class="card-title">Restocking Recommendations</span>
-          <span class="budget-count-note">{{ selectedItems.length }} of {{ recommendations.length }} items within budget</span>
+          <span class="card-title">{{ t('restocking.recommendations') }}</span>
+          <span class="budget-count-note">{{ selectedItems.length }} {{ t('restocking.of') }} {{ recommendations.length }} {{ t('common.items') }}</span>
         </div>
 
         <div v-if="recommendations.length === 0" class="empty-state">
-          No recommendations available
+          {{ t('restocking.noRecommendations') }}
         </div>
 
         <div v-else class="table-container">
           <table>
             <thead>
               <tr>
-                <th>SKU</th>
-                <th>Item Name</th>
-                <th>Category</th>
-                <th>On Hand</th>
-                <th>Reorder Point</th>
-                <th>Forecasted Demand</th>
-                <th>Unit Cost</th>
-                <th>Qty</th>
-                <th>Total Cost</th>
-                <th>Status</th>
+                <th>{{ t('restocking.table.sku') }}</th>
+                <th>{{ t('restocking.table.itemName') }}</th>
+                <th>{{ t('restocking.table.category') }}</th>
+                <th>{{ t('restocking.table.onHand') }}</th>
+                <th>{{ t('restocking.table.reorderPoint') }}</th>
+                <th>{{ t('restocking.table.forecastedDemand') }}</th>
+                <th>{{ t('restocking.table.unitCost') }}</th>
+                <th>{{ t('restocking.table.qty') }}</th>
+                <th>{{ t('restocking.table.totalCost') }}</th>
+                <th>{{ t('restocking.table.status') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -97,12 +97,12 @@
                 <td>{{ currencySymbol }}{{ row.total_cost.toLocaleString() }}</td>
                 <td>
                   <template v-if="row.withinBudget">
-                    <span v-if="row.is_critical" class="badge danger">Critical</span>
-                    <span v-else-if="row.quantity_on_hand < row.reorder_point * 1.5" class="badge warning">Low</span>
-                    <span v-else class="badge success">OK</span>
+                    <span v-if="row.is_critical" class="badge danger">{{ t('restocking.critical') }}</span>
+                    <span v-else-if="row.quantity_on_hand < row.reorder_point * 1.5" class="badge warning">{{ t('restocking.low') }}</span>
+                    <span v-else class="badge success">{{ t('restocking.ok') }}</span>
                   </template>
                   <template v-else>
-                    <span class="badge over-budget">Over budget</span>
+                    <span class="badge over-budget">{{ t('restocking.overBudget') }}</span>
                   </template>
                 </td>
               </tr>
@@ -118,7 +118,7 @@
           :disabled="selectedItems.length === 0 || submitting"
           @click="placeOrder"
         >
-          {{ submitting ? 'Submitting...' : 'Place Order' }}
+          {{ submitting ? t('restocking.submitting') : t('restocking.placeOrder') }}
         </button>
       </div>
     </template>
@@ -137,7 +137,11 @@ export default {
     const { t, currentCurrency } = useI18n()
     const { selectedLocation, selectedCategory } = useFilters()
 
-    const currencySymbol = computed(() => currentCurrency.value === 'JPY' ? '¥' : '$')
+    const currencySymbol = computed(() => {
+      if (currentCurrency.value === 'JPY') return '¥'
+      if (currentCurrency.value === 'EUR') return '€'
+      return '$'
+    })
 
     const loading = ref(false)
     const error = ref(null)

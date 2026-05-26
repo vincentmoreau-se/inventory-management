@@ -6,6 +6,8 @@ export default {
     orders: 'Orders',
     finance: 'Finance',
     demandForecast: 'Demand Forecast',
+    restocking: 'Restocking',
+    reports: 'Reports',
     companyName: 'Catalyst Components',
     subtitle: 'Inventory Management System'
   },
@@ -55,8 +57,11 @@ export default {
       daysDelayed: 'Days Delayed',
       priority: 'Priority',
       unitsShort: 'units short',
-      days: 'days'
+      days: 'days',
+      actions: 'Actions'
     },
+    createPO: 'Create PO',
+    viewPO: 'View PO',
     topProducts: {
       title: 'Top Products by Revenue',
       sku: 'SKU',
@@ -112,6 +117,9 @@ export default {
     onTimeDelivery: 'On-Time Delivery',
     itemsCount: '{count} items',
     quantity: 'Qty',
+    submittedOrders: 'Submitted Orders',
+    noRestockingOrders: 'No restocking orders submitted yet',
+    leadTimeDays: '{days} days',
     table: {
       orderNumber: 'Order Number',
       orderId: 'Order ID',
@@ -125,7 +133,10 @@ export default {
       totalValue: 'Total Value',
       status: 'Status',
       expectedDelivery: 'Expected Delivery',
-      actualDelivery: 'Actual Delivery'
+      actualDelivery: 'Actual Delivery',
+      submitted: 'Submitted',
+      leadTime: 'Lead Time',
+      totalCost: 'Total Cost'
     }
   },
 
@@ -304,10 +315,90 @@ export default {
     noTasks: 'No tasks yet. Add your first task above!'
   },
 
+  // Reports
+  reports: {
+    title: 'Performance Reports',
+    description: 'View quarterly performance metrics and monthly trends',
+    quarterlyPerformance: 'Quarterly Performance',
+    monthlyRevenueTrend: 'Monthly Revenue Trend',
+    monthOverMonth: 'Month-over-Month Analysis',
+    quarter: 'Quarter',
+    totalOrders: 'Total Orders',
+    totalRevenue: 'Total Revenue',
+    avgOrderValue: 'Avg Order Value',
+    fulfillmentRate: 'Fulfillment Rate',
+    month: 'Month',
+    orders: 'Orders',
+    revenue: 'Revenue',
+    change: 'Change',
+    growthRate: 'Growth Rate',
+    totalRevenueYTD: 'Total Revenue (YTD)',
+    avgMonthlyRevenue: 'Avg Monthly Revenue',
+    totalOrdersYTD: 'Total Orders (YTD)',
+    bestQuarter: 'Best Performing Quarter'
+  },
+
+  // Backlog
+  backlog: {
+    title: 'Backlog Management',
+    description: 'Track and resolve inventory shortages',
+    highPriority: 'High Priority',
+    mediumPriority: 'Medium Priority',
+    lowPriority: 'Low Priority',
+    totalItems: 'Total Backlog Items',
+    backlogItems: 'Backlog Items',
+    noBacklog: 'No backlog items - all orders can be fulfilled!',
+    unitsShort: 'units short',
+    days: 'days',
+    table: {
+      orderId: 'Order ID',
+      sku: 'SKU',
+      itemName: 'Item Name',
+      quantityNeeded: 'Quantity Needed',
+      quantityAvailable: 'Quantity Available',
+      shortage: 'Shortage',
+      daysDelayed: 'Days Delayed',
+      priority: 'Priority'
+    }
+  },
+
+  // Restocking
+  restocking: {
+    title: 'Restocking',
+    description: 'Recommend and order inventory based on demand forecasts and available budget.',
+    availableBudget: 'Available Budget',
+    dragToAdjust: 'Drag to adjust',
+    itemsSelected: 'Items Selected',
+    totalCost: 'Total Cost',
+    remainingBudget: 'Remaining Budget',
+    recommendations: 'Restocking Recommendations',
+    of: 'of',
+    noRecommendations: 'No recommendations available',
+    critical: 'Critical',
+    low: 'Low',
+    ok: 'OK',
+    overBudget: 'Over budget',
+    placeOrder: 'Place Order',
+    submitting: 'Submitting...',
+    table: {
+      sku: 'SKU',
+      itemName: 'Item Name',
+      category: 'Category',
+      onHand: 'On Hand',
+      reorderPoint: 'Reorder Point',
+      forecastedDemand: 'Forecasted Demand',
+      unitCost: 'Unit Cost',
+      qty: 'Qty',
+      totalCost: 'Total Cost',
+      status: 'Status'
+    }
+  },
+
   // Language
   language: {
     english: 'English',
     japanese: 'Japanese',
+    french: 'French',
     selectLanguage: 'Select Language'
   },
 

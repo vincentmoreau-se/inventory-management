@@ -1,19 +1,23 @@
 import { ref, computed } from 'vue'
 import en from '../locales/en'
 import ja from '../locales/ja'
+import fr from '../locales/fr'
 
 const translations = {
   en,
-  ja
+  ja,
+  fr
 }
 
 // Load saved locale from localStorage, default to 'en'
 const savedLocale = localStorage.getItem('app-locale') || 'en'
 const currentLocale = ref(savedLocale)
 
-// Currency is automatically set based on locale (en -> USD, ja -> JPY)
+// Currency is automatically set based on locale (en -> USD, ja -> JPY, fr -> EUR)
 const currentCurrency = computed(() => {
-  return currentLocale.value === 'ja' ? 'JPY' : 'USD'
+  if (currentLocale.value === 'ja') return 'JPY'
+  if (currentLocale.value === 'fr') return 'EUR'
+  return 'USD'
 })
 
 export function useI18n() {
@@ -69,7 +73,8 @@ export function useI18n() {
   const localeName = computed(() => {
     const names = {
       en: 'English',
-      ja: '日本語'
+      ja: '日本語',
+      fr: 'Français'
     }
     return names[currentLocale.value] || currentLocale.value
   })

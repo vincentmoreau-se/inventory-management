@@ -11,30 +11,30 @@
       <div class="card submitted-orders-card">
         <div class="card-header submitted-orders-header" @click="submittedOrdersExpanded = !submittedOrdersExpanded">
           <h3 class="card-title">
-            Submitted Orders
+            {{ t('orders.submittedOrders') }}
             <span class="order-count-badge">{{ restockingOrders.length }}</span>
           </h3>
           <span class="chevron" :class="{ rotated: submittedOrdersExpanded }">&#9660;</span>
         </div>
 
         <div v-show="submittedOrdersExpanded">
-          <div v-if="restockingLoading" class="loading" style="padding: 1rem;">Loading...</div>
+          <div v-if="restockingLoading" class="loading" style="padding: 1rem;">{{ t('common.loading') }}</div>
 
           <div v-else-if="restockingOrders.length === 0" class="empty-submitted">
-            No restocking orders submitted yet
+            {{ t('orders.noRestockingOrders') }}
           </div>
 
           <div v-else class="table-container">
             <table>
               <thead>
                 <tr>
-                  <th>Order #</th>
-                  <th>Items</th>
-                  <th>Submitted</th>
-                  <th>Expected Delivery</th>
-                  <th>Lead Time</th>
-                  <th>Total Cost</th>
-                  <th>Status</th>
+                  <th>{{ t('orders.table.orderNumber') }}</th>
+                  <th>{{ t('orders.table.items') }}</th>
+                  <th>{{ t('orders.table.submitted') }}</th>
+                  <th>{{ t('orders.table.expectedDelivery') }}</th>
+                  <th>{{ t('orders.table.leadTime') }}</th>
+                  <th>{{ t('orders.table.totalCost') }}</th>
+                  <th>{{ t('orders.table.status') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -42,7 +42,7 @@
                   <td><strong>{{ order.order_number }}</strong></td>
                   <td>
                     <details class="items-details">
-                      <summary class="items-summary">{{ order.items.length }} item(s)</summary>
+                      <summary class="items-summary">{{ t('orders.itemsCount', { count: order.items.length }) }}</summary>
                       <div class="items-dropdown">
                         <div v-for="item in order.items" :key="item.sku" class="item-entry">
                           <span class="item-name">{{ item.name }}</span>
@@ -53,7 +53,7 @@
                   </td>
                   <td>{{ formatDate(order.submitted_at) }}</td>
                   <td>{{ formatDate(order.expected_delivery) }}</td>
-                  <td>{{ order.lead_time_days }} days</td>
+                  <td>{{ t('orders.leadTimeDays', { days: order.lead_time_days }) }}</td>
                   <td><strong>{{ currencySymbol }}{{ order.total_cost.toLocaleString() }}</strong></td>
                   <td><span class="badge info">{{ order.status }}</span></td>
                 </tr>
@@ -145,7 +145,9 @@ export default {
     const { t, currentCurrency, translateProductName, translateCustomerName } = useI18n()
 
     const currencySymbol = computed(() => {
-      return currentCurrency.value === 'JPY' ? '¥' : '$'
+      if (currentCurrency.value === 'JPY') return '¥'
+      if (currentCurrency.value === 'EUR') return '€'
+      return '$'
     })
     const loading = ref(true)
     const error = ref(null)
@@ -203,7 +205,8 @@ export default {
 
     const formatDate = (dateString) => {
       const { currentLocale } = useI18n()
-      const locale = currentLocale.value === 'ja' ? 'ja-JP' : 'en-US'
+      const localeMap = { ja: 'ja-JP', fr: 'fr-FR', en: 'en-US' }
+      const locale = localeMap[currentLocale.value] || 'en-US'
       return new Date(dateString).toLocaleDateString(locale, {
         year: 'numeric',
         month: 'short',

@@ -8,6 +8,61 @@
     <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else>
+      <div class="card submitted-orders-card">
+        <div class="card-header submitted-orders-header" @click="submittedOrdersExpanded = !submittedOrdersExpanded">
+          <h3 class="card-title">
+            Submitted Orders
+            <span class="order-count-badge">{{ restockingOrders.length }}</span>
+          </h3>
+          <span class="chevron" :class="{ rotated: submittedOrdersExpanded }">&#9660;</span>
+        </div>
+
+        <div v-show="submittedOrdersExpanded">
+          <div v-if="restockingLoading" class="loading" style="padding: 1rem;">Loading...</div>
+
+          <div v-else-if="restockingOrders.length === 0" class="empty-submitted">
+            No restocking orders submitted yet
+          </div>
+
+          <div v-else class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Items</th>
+                  <th>Submitted</th>
+                  <th>Expected Delivery</th>
+                  <th>Lead Time</th>
+                  <th>Total Cost</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="order in restockingOrders" :key="order.id">
+                  <td><strong>{{ order.order_number }}</strong></td>
+                  <td>
+                    <details class="items-details">
+                      <summary class="items-summary">{{ order.items.length }} item(s)</summary>
+                      <div class="items-dropdown">
+                        <div v-for="item in order.items" :key="item.sku" class="item-entry">
+                          <span class="item-name">{{ item.name }}</span>
+                          <span class="item-meta">Qty: {{ item.quantity }} @ {{ currencySymbol }}{{ item.unit_cost.toLocaleString() }}</span>
+                        </div>
+                      </div>
+                    </details>
+                  </td>
+                  <td>{{ formatDate(order.submitted_at) }}</td>
+                  <td>{{ formatDate(order.expected_delivery) }}</td>
+                  <td>{{ order.lead_time_days }} days</td>
+                  <td><strong>{{ currencySymbol }}{{ order.total_cost.toLocaleString() }}</strong></td>
+                  <td><span class="badge info">{{ order.status }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <div class="stats-grid">
         <div class="stat-card success">
           <div class="stat-label">{{ t('status.delivered') }}</div>
@@ -95,6 +150,9 @@ export default {
     const loading = ref(true)
     const error = ref(null)
     const orders = ref([])
+    const restockingOrders = ref([])
+    const restockingLoading = ref(false)
+    const submittedOrdersExpanded = ref(true)
 
     // Use shared filters
     const {
@@ -153,7 +211,23 @@ export default {
       })
     }
 
-    onMounted(loadOrders)
+    const loadRestockingOrders = async () => {
+      try {
+        restockingLoading.value = true
+        restockingOrders.value = await api.getRestockingOrders()
+        // Auto-expand if there are orders
+        if (restockingOrders.value.length > 0) submittedOrdersExpanded.value = true
+      } catch (err) {
+        console.error('Failed to load restocking orders:', err)
+      } finally {
+        restockingLoading.value = false
+      }
+    }
+
+    onMounted(() => {
+      loadOrders()
+      loadRestockingOrders()
+    })
 
     return {
       t,
@@ -165,7 +239,11 @@ export default {
       formatDate,
       currencySymbol,
       translateProductName,
-      translateCustomerName
+      translateCustomerName,
+      restockingOrders,
+      restockingLoading,
+      submittedOrdersExpanded,
+      loadRestockingOrders
     }
   }
 }
@@ -275,5 +353,48 @@ export default {
 .item-meta {
   font-size: 0.813rem;
   color: #64748b;
+}
+
+.submitted-orders-card {
+  margin-bottom: 1.25rem;
+}
+
+.submitted-orders-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.submitted-orders-header:hover {
+  background: #f8fafc;
+}
+
+.order-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  margin-left: 0.5rem;
+}
+
+.chevron {
+  font-size: 0.75rem;
+  color: #64748b;
+  transition: transform 0.2s ease;
+}
+
+.chevron.rotated {
+  transform: rotate(180deg);
+}
+
+.empty-submitted {
+  padding: 1.5rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.875rem;
 }
 </style>
